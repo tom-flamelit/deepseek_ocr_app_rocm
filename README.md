@@ -2,7 +2,7 @@
 
 Modern OCR web application powered by DeepSeek-OCR with a stunning React frontend and FastAPI backend.
 
-> **Note**: This was a quickly vibe-coded project to test out DeepSeek-OCR! It basically works quite nice on an RTX 5090. The "Find" mode grounding boxes aren't quite working yet - probably my fault in not interpreting the dimensions correctly, but the core OCR functionality is pretty nice so far.
+> **Note**: This was a quickly vibe-coded project to test out DeepSeek-OCR! The initial version targeted an RTX 5090, but this fork refreshes the stack for **AMD GPUs running ROCm 6.1**. The "Find" mode grounding boxes aren't quite working yet - probably my fault in not interpreting the dimensions correctly, but the core OCR functionality is pretty nice so far.
 
 ## Quick Start
 
@@ -38,7 +38,7 @@ Then open:
 - **Backend**: FastAPI + PyTorch + Transformers 4.46 + DeepSeek-OCR
 - **Server**: Nginx (reverse proxy)
 - **Container**: Docker + Docker Compose with multi-stage builds
-- **GPU**: NVIDIA CUDA support (tested on RTX 5090)
+- **GPU**: AMD ROCm 6.1 support (tested on Radeon PRO W7800)
 
 ## Project Structure
 
@@ -79,13 +79,20 @@ npm run dev
 ## Requirements
 
 - Docker & Docker Compose
-- NVIDIA GPU with CUDA support (tested on RTX 5090)
-- nvidia-docker runtime
+- AMD GPU with ROCm 6.1 support (tested on Radeon PRO W7800)
+- ROCm drivers/runtime on the host (`/dev/kfd` & `/dev/dri` exposed to containers)
 - ~8-12GB VRAM for model
 
 ## Known Issues
 
 - 📦 **Find mode grounding boxes**: Not rendering correctly - likely dimension scaling issue in the canvas overlay logic. Boxes are detected and returned by the backend, but the frontend visualization needs work.
+
+## ROCm Notes
+
+- The backend container is built from `rocm/pytorch:rocm6.1_ubuntu22.04_py3.10_pytorch_2.5.1`, so no extra PyTorch install steps are required.
+- Ensure the host user has access to `/dev/kfd` and `/dev/dri`. Adding your user to the `video` and `render` groups usually does the trick.
+- If your GPU reports an older GFX IP, set `HSA_OVERRIDE_GFX_VERSION` in `.env` or the compose file (for example `11.0.0` for RDNA3).
+- Override `TORCH_DEVICE` or `TORCH_DTYPE` environment variables if you need to force a specific device/dtype (defaults are auto-detected).
 
 ## API Usage
 
@@ -116,8 +123,8 @@ npm run dev
 
 ### GPU not detected
 ```bash
-nvidia-smi
-docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
+rocminfo
+docker run --rm --device=/dev/kfd --device=/dev/dri --group-add video --group-add render rocm/pytorch:rocm6.1_ubuntu22.04_py3.10_pytorch_2.5.1 rocminfo
 ```
 
 ### Port conflicts

@@ -9,4 +9,3 @@ addict
 easydict
 pillow
 safetensors
-torch
