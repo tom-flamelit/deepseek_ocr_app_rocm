@@ -1,5 +1,5 @@
-# Backend Dockerfile - FastAPI + DeepSeek-OCR
-FROM nvcr.io/nvidia/pytorch:25.09-py3
+# Backend Dockerfile - FastAPI + DeepSeek-OCR (ROCm edition)
+FROM rocm/pytorch:rocm6.1_ubuntu22.04_py3.10_pytorch_2.5.1
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -9,7 +9,8 @@ WORKDIR /app
 
 # Install dependencies
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy backend code
 COPY main.py .

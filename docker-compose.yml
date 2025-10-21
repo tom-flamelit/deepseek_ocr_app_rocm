@@ -5,15 +5,15 @@ services:
     environment:
       MODEL_NAME: deepseek-ai/DeepSeek-OCR
       HF_HOME: /models
+      ROCR_VISIBLE_DEVICES: all
+      HSA_OVERRIDE_GFX_VERSION: ${HSA_OVERRIDE_GFX_VERSION:-}
     volumes:
       - ./models:/models
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    group_add:
+      - video
     shm_size: "4g"
     ports:
       - "8000:8000"

@@ -32,7 +32,41 @@ async def lifespan(app: FastAPI):
     
     # Load model
     print(f"🚀 Loading {MODEL_NAME}...")
-    torch_dtype = torch.bfloat16
+
+    requested_device = os.environ.get("TORCH_DEVICE")
+    if requested_device:
+        device = requested_device
+    elif torch.cuda.is_available():
+        device = "cuda"
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+
+    dtype_env = os.environ.get("TORCH_DTYPE", "").strip().lower()
+    dtype_lookup = {
+        "float16": torch.float16,
+        "fp16": torch.float16,
+        "bfloat16": torch.bfloat16,
+        "bf16": torch.bfloat16,
+        "float32": torch.float32,
+        "fp32": torch.float32,
+    }
+    torch_dtype = dtype_lookup.get(dtype_env)
+
+    if torch_dtype is None:
+        if device == "cpu":
+            torch_dtype = torch.float32
+        else:
+            is_bf16_supported = False
+            if torch.cuda.is_available():
+                try:
+                    is_bf16_supported = bool(torch.cuda.is_bf16_supported())
+                except AttributeError:
+                    is_bf16_supported = False
+            torch_dtype = torch.bfloat16 if is_bf16_supported else torch.float16
+
+    print(f"📦 Using device='{device}' with dtype='{torch_dtype}'")
     
     tokenizer = AutoTokenizer.from_pretrained(
         MODEL_NAME,
@@ -45,7 +79,7 @@ async def lifespan(app: FastAPI):
         use_safetensors=True,
         attn_implementation="eager",
         torch_dtype=torch_dtype,
-    ).eval().to("cuda")
+    ).eval().to(device)
     
     # Pad token setup
     try:
